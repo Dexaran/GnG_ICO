@@ -571,16 +571,24 @@ contract ICO is IERC223Recipient, Ownable
 
     struct asset
     {
-        uint256 rate; // Determines how much GnG tokens a user will receive per 1000 "asset tokens" deposited
-        bool native_currency; // true for CLO, false for tokens
+        uint256 rate; // Determines how much GnG tokens a user will receive per 1000 "asset tokens" deposited.
+        bool native_currency; // true for CLO, false for tokens.
         address contract_address; // for tokens - address of the "asset token" contract.
+        string name;  // Name of the accepted pair, for convenience purposes only.
     }
 
     mapping (uint256 => asset) public assets; // ID => asset_struct; ID = 0 is for native currency of the chain.
-    mapping (address => uint256) public asset_index;  // address of token contract => ID of asset
+    mapping (address => uint256) public asset_index;  // address of token contract => ID of asset.
 
     constructor() {
         _owner = msg.sender;
+            assets[0].name = "Native";
+    }
+
+    receive() external payable
+    {
+        // User is buying GnG token and paying with a native currency
+
     }
 
     function tokenReceived(address _from, uint _value, bytes memory _data) external override
@@ -588,29 +596,43 @@ contract ICO is IERC223Recipient, Ownable
         require(block.timestamp >= start_timestamp && block.timestamp <= end_timestamp, "Incorrect timing");
         if(msg.sender == GnGToken && _from == owner())
         {
+            // Deposit of GnG token by the owner. Do nothing and accept the deposit.
             return;
         }
         if(asset_index[msg.sender] != 0)
         {
+            // User is buying GnG token and paying with a token from "acceptable tokens list".
             uint256 reward = assets[asset_index[msg.sender]].rate * _value / 1000;
             IERC223(GnGToken).transfer(_from, reward);
         }
         else
         {
+            // User is depositing a token which is not in "acceptable tokens list"
+            // Revert transaction and stop the execution.
             revert();
         }
     }
 
-    function modify_asset(bool _native, address _token_contract, uint256 _rate) external onlyOwner
+    function get_depositable_asset(uint256 _id) external view returns (string memory name, uint256 rate, address token_contract)
+    {
+        return (assets[_id].name, assets[_id].rate, assets[_id].contract_address);
+    }
+
+    function modify_asset(bool _native, uint256 _id, uint256 _rate, address _token_contract, string memory _name) external onlyOwner
     {
         if(_native)
         {
-            // We are setting up the price rates for NATIVE CURRENCY (CLO on Callisto chain, ETH on Ethereum)
-
+            // We are setting up the price rates for NATIVE CURRENCY (CLO on Callisto chain, ETH on Ethereum).
+            assets[0].rate = _rate;
         }
         else
         {
-            // We are setting up the price for TOKEN that will be accepted as payment during ICO
+            // We are setting up the price for TOKEN that will be accepted as payment during ICO.
+            require (_token_contract != address(0));
+            assets[_id].rate = _rate;
+            assets[_id].contract_address = _token_contract;
+            assets[_id].name = _name;
+            asset_index[_token_contract] = _id;
         }
     }
     
@@ -618,5 +640,10 @@ contract ICO is IERC223Recipient, Ownable
     {
         start_timestamp = _start_UNIX;
         end_timestamp   = _end_UNIX;
+    }
+
+    function ERC20Rescue(address erc20token) public onlyOwner
+    {
+        IERC223(erc20token).transfer(owner(), IERC223(erc20token).balanceOf(address(this)));
     }
 }
