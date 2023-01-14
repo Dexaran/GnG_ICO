@@ -587,8 +587,21 @@ contract ICO is IERC223Recipient, Ownable
 
     receive() external payable
     {
-        // User is buying GnG token and paying with a native currency
+        // User is buying GnG token and paying with a native currency.
+            uint256 reward = assets[0].rate * msg.value / 1000;
+            IERC223(GnGToken).transfer(msg.sender, reward);
+    }
 
+    function buy(address _token_contract, // Address of the contract of the token that will be deposited as the payment.
+                 uint256 _value_to_deposit)          // How much tokens will be used to pay for acquiring tokens from ICO
+                                          // IMPORTANT! This is not the amount of tokens that the user will receive,
+                                          //            this is the amount of token that the user will PAY.
+                                          //            The amount must be >= approved amount.
+                 external
+    {
+            uint256 _reward = assets[asset_index[_token_contract]].rate * _value_to_deposit / 1000;
+            IERC223(_token_contract).transferFrom(msg.sender, address(this), _value_to_deposit);
+            IERC223(GnGToken).transfer(msg.sender, _reward);
     }
 
     function tokenReceived(address _from, uint _value, bytes memory _data) external override
@@ -602,8 +615,8 @@ contract ICO is IERC223Recipient, Ownable
         if(asset_index[msg.sender] != 0)
         {
             // User is buying GnG token and paying with a token from "acceptable tokens list".
-            uint256 reward = assets[asset_index[msg.sender]].rate * _value / 1000;
-            IERC223(GnGToken).transfer(_from, reward);
+            uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000;
+            IERC223(GnGToken).transfer(_from, _reward);
         }
         else
         {
@@ -616,6 +629,14 @@ contract ICO is IERC223Recipient, Ownable
     function get_depositable_asset(uint256 _id) external view returns (string memory name, uint256 rate, address token_contract)
     {
         return (assets[_id].name, assets[_id].rate, assets[_id].contract_address);
+    }
+
+    // This function serves the purpose of prediction of the reward that a user can acquire by depositing 
+    // `_amount_of_payment` quantity of tokens `_token_address` to the contract
+    function get_reward(uint256 _amount_of_payment, address _token_address) external view returns (uint256 reward, string memory name)
+    {
+        uint256 _reward = assets[asset_index[_token_address]].rate * _amount_of_payment / 1000;
+        return (reward, assets[asset_index[_token_address]].name);
     }
 
     function modify_asset(bool _native, uint256 _id, uint256 _rate, address _token_contract, string memory _name) external onlyOwner
@@ -642,8 +663,24 @@ contract ICO is IERC223Recipient, Ownable
         end_timestamp   = _end_UNIX;
     }
 
+    // Special emergency function to rescue stuck ERC20 tokens that were accidentally deposited.
     function ERC20Rescue(address erc20token) public onlyOwner
     {
         IERC223(erc20token).transfer(owner(), IERC223(erc20token).balanceOf(address(this)));
+    }
+
+    // Function that allows owner to withdraw tokens.
+    function withdraw(uint256 _id) public onlyOwner
+    {
+        if(_id == 0)
+        {
+            // Withdrawing native currency.
+            payable(owner()).transfer(address(this).balance);
+        }
+        else
+        {
+            // Withdrawing a token.
+            IERC223( assets[_id].contract_address ).transfer(owner(), IERC223( assets[_id].contract_address ).balanceOf( address(this) ));
+        }
     }
 }
