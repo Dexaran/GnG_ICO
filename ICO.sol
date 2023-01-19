@@ -640,7 +640,7 @@ contract GnGToken is ERC223("Games and Goblins token", "GnG"), Ownable {
 
 contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 {
-    address public GnGToken;
+    address public GnGToken_address;
     uint256 public start_timestamp;
     uint256 public end_timestamp;
 
@@ -667,16 +667,16 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             uint256 _reward = assets[0].rate * msg.value / 1000;
 
         // Check edge cases
-        if(_reward > IERC223(GnGToken).balanceOf(address(this)))
+        if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
         {
             uint256 _old_reward = _reward;
-            _reward = IERC223(GnGToken).balanceOf(address(this));
+            _reward = IERC223(GnGToken_address).balanceOf(address(this));
             uint256 _reward_overflow = _reward - _old_reward;
 
             _refund_amount = _reward_overflow * 1000 / assets[0].rate;
         }
 
-            IERC223(GnGToken).transfer(msg.sender, _reward);
+            IERC223(GnGToken_address).transfer(msg.sender, _reward);
 
             if(_refund_amount > 0)
             {
@@ -695,10 +695,10 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         uint256 _reward = assets[asset_index[_token_contract]].rate * _value_to_deposit / 1000;
 
         // Check edge cases
-        if(_reward > IERC223(GnGToken).balanceOf(address(this)))
+        if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
         {
             uint256 _old_reward = _reward;
-            _reward = IERC223(GnGToken).balanceOf(address(this));
+            _reward = IERC223(GnGToken_address).balanceOf(address(this));
             uint256 _reward_overflow = _reward - _old_reward;
 
             _refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate;
@@ -706,7 +706,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
 
         IERC223(_token_contract).transferFrom(msg.sender, address(this), (_value_to_deposit - _refund_amount) );
-        IERC223(GnGToken).transfer(msg.sender, _reward);
+        IERC223(GnGToken_address).transfer(msg.sender, _reward);
     }
 
     function tokenReceived(address _from, uint _value, bytes memory _data) external override nonReentrant()
@@ -719,7 +719,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
         uint256 _refund_amount = 0;
         require(block.timestamp >= start_timestamp && block.timestamp <= end_timestamp, "Incorrect timing");
-        if(msg.sender == GnGToken && _from == owner())
+        if(msg.sender == GnGToken_address && _from == owner())
         {
             // Deposit of GnG token by the owner. Do nothing and accept the deposit.
             return;
@@ -730,16 +730,16 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000;
 
             // Check edge cases
-            if(_reward > IERC223(GnGToken).balanceOf(address(this)))
+            if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
                 {
                 uint256 _old_reward = _reward;
-                _reward = IERC223(GnGToken).balanceOf(address(this));
+                _reward = IERC223(GnGToken_address).balanceOf(address(this));
                 uint256 _reward_overflow = _reward - _old_reward;
 
                 _refund_amount = _reward_overflow * 1000 / assets[asset_index[msg.sender]].rate;
             }
 
-            IERC223(GnGToken).transfer(_from, _reward);
+            IERC223(GnGToken_address).transfer(_from, _reward);
 
             if(_refund_amount > 0)
             {
@@ -810,5 +810,16 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             // Withdrawing a token.
             IERC223( assets[_id].contract_address ).transfer(owner(), IERC223( assets[_id].contract_address ).balanceOf( address(this) ));
         }
+    }
+
+    // Function that allows owner to withdraw tokens.
+    function withdrawGNG(uint256 _amount) public onlyOwner
+    {
+        IERC223(GnGToken_address).transfer(owner(), _amount );
+    }
+
+    function assignGNGAddress(address _GNG) public onlyOwner
+    {
+        GnGToken_address = _GNG;
     }
 }
