@@ -791,12 +791,6 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             asset_index[_token_contract] = _id;
         }
     }
-    
-    function setup_ICO(uint256 _start_UNIX, uint256 _end_UNIX) external onlyOwner
-    {
-        start_timestamp = _start_UNIX;
-        end_timestamp   = _end_UNIX;
-    }
 
     // Special emergency function to rescue stuck ERC20 tokens that were accidentally deposited.
     function ERC20Rescue(address erc20token) public onlyOwner
@@ -825,11 +819,11 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         IERC223(GnGToken_address).transfer(owner(), _amount );
     }
 
-    function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_timestamp, uint256 _end_timestamp) public onlyOwner
+    function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX) public onlyOwner
     {
         GnGToken_address = _GNG;
-        start_timestamp  = _start_timestamp;
-        end_timestamp    = _end_timestamp;
+        start_timestamp  = _start_UNIX;
+        end_timestamp    = _end_UNIX;
         min_purchase     = _min_purchase;
     }
 }
