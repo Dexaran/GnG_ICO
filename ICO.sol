@@ -640,6 +640,7 @@ contract GnGToken is ERC223("Games and Goblins token", "GnG"), Ownable {
 
 contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 {
+    uint256 public min_purchase;  // Minimum amount of GNG tokens that a user must purchase.
     address public GnGToken_address;
     uint256 public start_timestamp;
     uint256 public end_timestamp;
@@ -660,6 +661,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             assets[0].name = "Native";
     }
 
+    // This function accepts NATIVE CURRENCY (CLO on Callisto chain),
+    // this function is used to purchase GNG tokens via CLO deposit.
     receive() external payable nonReentrant()
     {
         uint256 _refund_amount = 0;
@@ -676,12 +679,13 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             _refund_amount = _reward_overflow * 1000 / assets[0].rate;
         }
 
-            IERC223(GnGToken_address).transfer(msg.sender, _reward);
+        require(_reward >= min_purchase, "Minimum purchase criteria is not met");
+        IERC223(GnGToken_address).transfer(msg.sender, _reward);
 
-            if(_refund_amount > 0)
-            {
-                payable(msg.sender).transfer(_refund_amount);
-            }
+        if(_refund_amount > 0)
+        {
+            payable(msg.sender).transfer(_refund_amount);
+        }
     }
 
     function buy(address _token_contract, // Address of the contract of the token that will be deposited as the payment.
@@ -706,6 +710,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
 
         IERC223(_token_contract).transferFrom(msg.sender, address(this), (_value_to_deposit - _refund_amount) );
+
+        require(_reward >= min_purchase, "Minimum purchase criteria is not met");
         IERC223(GnGToken_address).transfer(msg.sender, _reward);
     }
 
@@ -739,6 +745,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                 _refund_amount = _reward_overflow * 1000 / assets[asset_index[msg.sender]].rate;
             }
 
+            require(_reward >= min_purchase, "Minimum purchase criteria is not met");
             IERC223(GnGToken_address).transfer(_from, _reward);
 
             if(_refund_amount > 0)
@@ -818,8 +825,11 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         IERC223(GnGToken_address).transfer(owner(), _amount );
     }
 
-    function assignGNGAddress(address _GNG) public onlyOwner
+    function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_timestamp, uint256 _end_timestamp) public onlyOwner
     {
         GnGToken_address = _GNG;
+        start_timestamp  = _start_timestamp;
+        end_timestamp    = _end_timestamp;
+        min_purchase     = _min_purchase;
     }
 }
