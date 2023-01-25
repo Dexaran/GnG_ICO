@@ -121,6 +121,11 @@ interface IERC223 {
     function balanceOf(address account) external view returns (uint256);
 
     /**
+     * @dev Returns the amount of tokens owned by `account`.
+     */
+    function decimals() external view returns (uint8);
+
+    /**
      * @dev Moves `amount` tokens from the caller's account to `recipient`.
      *
      * Returns a boolean value indicating whether the operation succeeded.
@@ -646,16 +651,33 @@ abstract contract PriceFeed
 
 contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 {
+    string  public contractName = "NOT INITIALIZED";
     uint256 public min_purchase;  // Minimum amount of GNG tokens that a user must purchase.
     address public GnGToken_address;
     uint256 public start_timestamp;
     uint256 public end_timestamp;
-    address public priceFeed = 0x9bFc3046ea26f8B09D3E85bd22AEc96C80D957e3;
+    address public priceFeed = 0x9bFc3046ea26f8B09D3E85bd22AEc96C80D957e3; // Price Feed oracle. Address is valid for CLO mainnet.
+    uint256 public tokenPricePer10000; // Price of 10000 GNG tokens in USD
+                                       // value 300 would mean that 1 GNG = 0.03 USD.
+
+
+    // This modifier prevents purchases that can be made before or after the ICO dates of the contract.
+    // NOTE! this modifier allows the code of the function to execute first,
+    //       therefore `owner` of the ICO contract will be able to deposit ERC223 GNG to the contract
+    //       before the `ICO start date` and the `tokenReceived()` function will be invoked
+    //       but it will end execution with `return` prior to the execution of the modifier code.
+    modifier ICOstarted()
+    {
+        _;
+        require(block.timestamp >= start_timestamp && block.timestamp <= end_timestamp, "Incorrect timing");
+    }
 
     struct asset
     {
         // uint256 rate; // Determines how much GnG tokens a user will receive per 1000 "asset tokens" deposited.
         // bool native_currency; // true for CLO, false for tokens.
+
+
         address contract_address; // for tokens - address of the "asset token" contract.
         string name;  // Name of the accepted pair, for convenience purposes only.
     }
@@ -665,18 +687,23 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     constructor() {
         _owner = msg.sender;
-            assets[0].name = "Native";
+        assets[0].name = "Native";
+        assets[0].contract_address = 0x0000000000000000000000000000000000000001;
     }
 
     // This function accepts NATIVE CURRENCY (CLO on Callisto chain),
     // this function is used to purchase GNG tokens via CLO deposit.
-    receive() external payable nonReentrant()
+    receive() external payable ICOstarted() nonReentrant()
     {
+        require(PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) != 0, "Price Feed error");
         uint256 _refund_amount = 0;
         // User is buying GnG token and paying with a native currency.
             //uint256 _reward = assets[0].rate * msg.value / 1000; // Old calculation function for manual price update version.
 
-            uint256 _reward = PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) * msg.value / 1000;
+            // `PriceFeedData/1e18 * msg.value / 1e18` ==>> This is value that was paid in USD
+            // `USD value / tokenPricePer10000 * 10000 * 1e18` ==>> this is final value of the tokens that will be paid respecting decimals
+            // since both PriceFeedData and GNG token have 18 decimals we will simply remove `/1e18` and `*1e18` from the equation.
+            uint256 _reward = PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001)/1e18 * msg.value / tokenPricePer10000 * 10000;
 
         // Check edge cases
         if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
@@ -685,7 +712,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             _reward = IERC223(GnGToken_address).balanceOf(address(this));
             uint256 _reward_overflow = _reward - _old_reward;
 
-            _refund_amount = _reward_overflow * 1000 / PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001);
+            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / (PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001)/1e18);
         }
 
         require(_reward >= min_purchase, "Minimum purchase criteria is not met");
@@ -702,10 +729,13 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                                           // IMPORTANT! This is not the amount of tokens that the user will receive,
                                           //            this is the amount of token that the user will PAY.
                                           //            The amount must be >= approved amount.
-                 external nonReentrant()
+                 external ICOstarted() nonReentrant()
     {
+        require(PriceFeed(priceFeed).getPrice(_token_contract) != 0, "Price Feed does not contain info about this token.");
         uint256 _refund_amount = 0;
-        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_contract) * _value_to_deposit / 1000;
+
+        // PriceFeedData * _value_to_deposit / decimals ==>> 
+        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_contract)/1e18 * _value_to_deposit / tokenPricePer10000 * 10000;
 
         // Check edge cases
         if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
@@ -715,7 +745,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             uint256 _reward_overflow = _reward - _old_reward;
 
             //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
-            _refund_amount = _reward_overflow * 1000 / PriceFeed(priceFeed).getPrice(_token_contract);
+            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / (PriceFeed(priceFeed).getPrice(_token_contract)/1e18);
         }
 
 
@@ -725,7 +755,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         IERC223(GnGToken_address).transfer(msg.sender, _reward);
     }
 
-    function tokenReceived(address _from, uint _value, bytes memory _data) external override nonReentrant()
+    function tokenReceived(address _from, uint _value, bytes memory _data) external override ICOstarted() nonReentrant()
     {
         // Incoming transaction of a ERC223 token is handled here
         // here `msg.sender` is the address of the token contract which is being deposited
@@ -733,18 +763,20 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         //      `_from` is the address of the user who initiated the transfer
         //      `_value` is the amount of ERC223 tokens being deposited.
 
+        // Owner can deposit GNG token to the ICO contract and this function will be invoked.
+
         uint256 _refund_amount = 0;
-        require(block.timestamp >= start_timestamp && block.timestamp <= end_timestamp, "Incorrect timing");
         if(msg.sender == GnGToken_address && _from == owner())
         {
             // Deposit of GnG token by the owner. Do nothing and accept the deposit.
+            // Stop execution preventing the execution of the ICOstarted() modifier.
             return;
         }
         if(asset_index[msg.sender] != 0)
         {
             // User is buying GnG token and paying with a token from "acceptable tokens list".
             //uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000; // Old calculation function.
-            uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender) * _value / 1000;
+            uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender)/1e18 * _value / tokenPricePer10000 * 10000;
 
             // Check edge cases
             if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
@@ -754,7 +786,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                 uint256 _reward_overflow = _reward - _old_reward;
 
                 //_refund_amount = _reward_overflow * 1000 / assets[asset_index[msg.sender]].rate; // Old calculation funciton.
-                _refund_amount = _reward_overflow * 1000 / PriceFeed(priceFeed).getPrice(msg.sender);
+                _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / (PriceFeed(priceFeed).getPrice(msg.sender)/1e18);
             }
 
             require(_reward >= min_purchase, "Minimum purchase criteria is not met");
@@ -773,6 +805,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         }
     }
 
+    // Function that returns info about acceptable payment options
+    // _id = 0 is for native currency (CLO).
     function get_depositable_asset(uint256 _id) external view returns (string memory name, uint256 rate, address token_contract)
     {
         return (assets[_id].name, PriceFeed(priceFeed).getPrice(assets[_id].contract_address), assets[_id].contract_address);
@@ -822,12 +856,21 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         IERC223(GnGToken_address).transfer(owner(), _amount );
     }
 
-    function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX, address _priceFeed) public onlyOwner
+    function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX, address _priceFeed, uint256 _targetPrice, string calldata _name) public onlyOwner
     {
-        GnGToken_address = _GNG;
-        start_timestamp  = _start_UNIX;
-        end_timestamp    = _end_UNIX;
-        min_purchase     = _min_purchase;
-        priceFeed        = _priceFeed;
+        GnGToken_address   = _GNG;
+        start_timestamp    = _start_UNIX;
+        end_timestamp      = _end_UNIX;
+        min_purchase       = _min_purchase;
+        priceFeed          = _priceFeed;
+        contractName       = _name;
+        tokenPricePer10000 = _targetPrice;
+    }
+
+    // Emergency function that allows the owner of the contract to call any code
+    // from any other "template contract" on behalf of the ICO contract.
+    function delegateCall(address _to, bytes calldata _data) external onlyOwner
+    {
+        (bool success, bytes memory data) = _to.delegatecall(_data);
     }
 }
