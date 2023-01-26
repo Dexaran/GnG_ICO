@@ -11,3 +11,5 @@
 - Test CLOE Token: https://explorer.callisto.network/address/0x84a8509CbAa982A35fFbc3cd7c1eBbe9534b6C60/transactions
 
 - Test PriceFeed that is connected to ICO contract: 0x59D9874c39c9D21A5Bd44D77dba636451Ca675E7
+
+### Min deposit must be always more than 1 UNIT (1 CLO / 1 SOY or 1 CLOE)
