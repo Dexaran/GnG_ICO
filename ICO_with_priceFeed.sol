@@ -816,7 +816,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     // `_amount_of_payment` quantity of tokens `_token_address` to the contract
     function get_reward(uint256 _amount_of_payment, address _token_address) external view returns (uint256 reward, string memory name)
     {
-        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address) * _amount_of_payment / 1000;
+        ///               3176591470000000                              * 200 * 1e18         /  200 * 10000    
+        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address) * _amount_of_payment / tokenPricePer10000 * 10000;
         return (_reward, assets[asset_index[_token_address]].name);
     }
 
