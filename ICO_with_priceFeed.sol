@@ -710,7 +710,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             // `PriceFeedData/1e18 * msg.value / 1e18` ==>> This is value that was paid in USD
             // `USD value / tokenPricePer10000 * 10000 * 1e18` ==>> this is final value of the tokens that will be paid respecting decimals
             // since both PriceFeedData and GNG token have 18 decimals we will simply remove `/1e18` and `*1e18` from the equation.
-            uint256 _reward = PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001)/1e18 * msg.value / tokenPricePer10000 * 10000;
+            uint256 _reward = PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) * msg.value / tokenPricePer10000 * 10000 /1e18;
 
         // Check edge cases
         if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
@@ -719,7 +719,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             _reward = IERC223(GnGToken_address).balanceOf(address(this));
             uint256 _reward_overflow = _reward - _old_reward;
 
-            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / (PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001)/1e18);
+            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) /1e18;
         }
 
         require(_reward >= min_purchase, "Minimum purchase criteria is not met");
@@ -742,7 +742,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         uint256 _refund_amount = 0;
 
         // PriceFeedData * _value_to_deposit / decimals ==>> 
-        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_contract)/1e18 * _value_to_deposit / tokenPricePer10000 * 10000;
+        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_contract) * _value_to_deposit / tokenPricePer10000 * 10000 /1e18;
 
         // Check edge cases
         if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
@@ -752,7 +752,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             uint256 _reward_overflow = _reward - _old_reward;
 
             //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
-            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / (PriceFeed(priceFeed).getPrice(_token_contract)/1e18);
+            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / PriceFeed(priceFeed).getPrice(_token_contract)/1e18;
         }
 
 
@@ -784,7 +784,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         {
             // User is buying GnG token and paying with a token from "acceptable tokens list".
             //uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000; // Old calculation function.
-            uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender)/1e18 * _value / tokenPricePer10000 * 10000;
+            uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender) * _value / tokenPricePer10000 * 10000 /1e18;
 
             // Check edge cases
             if(_reward > IERC223(GnGToken_address).balanceOf(address(this)))
@@ -794,7 +794,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                 uint256 _reward_overflow = _reward - _old_reward;
 
                 //_refund_amount = _reward_overflow * 1000 / assets[asset_index[msg.sender]].rate; // Old calculation funciton.
-                _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / (PriceFeed(priceFeed).getPrice(msg.sender)/1e18);
+                _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / PriceFeed(priceFeed).getPrice(msg.sender) /1e18;
             }
 
             require(_reward >= min_purchase, "Minimum purchase criteria is not met");
@@ -825,7 +825,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     function get_reward(uint256 _amount_of_payment, address _token_address) external view returns (uint256 reward, string memory name)
     {
         ///               3176591470000000   /1e18                           * 200 * 1e18         /  200 * 10000    
-        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address)/1e18 * _amount_of_payment / tokenPricePer10000 * 10000;
+        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address) * _amount_of_payment / tokenPricePer10000 * 10000 / 1e18;
         return (_reward, assets[asset_index[_token_address]].name);
     }
 
