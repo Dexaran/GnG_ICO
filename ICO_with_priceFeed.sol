@@ -772,7 +772,6 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
         // Owner can deposit GNG token to the ICO contract and this function will be invoked.
 
-        require(PriceFeed(priceFeed).getPrice(msg.sender) != 0, "Price Feed does not contain info about this token.");
         uint256 _refund_amount = 0;
         if(msg.sender == GnGToken_address && _from == owner())
         {
@@ -782,6 +781,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         }
         if(asset_index[msg.sender] != 0)
         {
+            require(PriceFeed(priceFeed).getPrice(msg.sender) != 0, "Price Feed does not contain info about this token.");
             // User is buying GnG token and paying with a token from "acceptable tokens list".
             //uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000; // Old calculation function.
             uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender) * _value / tokenPricePer10000 * 10000 /1e18;
