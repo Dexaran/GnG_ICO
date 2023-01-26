@@ -681,12 +681,14 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                                                         // 200 is 20%. (200/1000 = 0.2);
 
     uint256 public vesting_period_percentage = 200;     // % that will become available for claiming at each Vesting Period. Will be divided by 1000.
+    uint256 public vesting_periods_total     = 6;       // A total number of vesting periods. After that much rewards were claimed no vesting will be paid.
 
     struct Purchase
     {
         uint256 amountGNG;
         uint256 vesting_timestamp;
         uint256 amount_per_period;
+        uint256 claims_count;
     }
 
     mapping (address => Purchase) public purchases;
@@ -725,18 +727,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function _finalisePayment(uint256 _reward_amount, address _buyer) internal
     {
-        if(purchases[_buyer].amountGNG == 0)
-        {
-            // This user is making his first deposit. There is no record of his address in the contract yet.
-        }
-        else
-        {
-            // The user already has record of his address in the contract. He is making additional purchase.
-
-        }
-
         purchases[_buyer].amountGNG         += _reward_amount; // Increment by _reward_amount because it can be not the first purchase from this address.
-        purchases[_buyer].vesting_timestamp = block.timestamp;
+        purchases[_buyer].vesting_timestamp = end_timestamp;
         purchases[_buyer].amount_per_period += _reward_amount * vesting_period_percentage / 1000;
 
         IERC223(GnGToken_address).transfer(_buyer, _reward_amount * instant_delivery / 1000);
@@ -744,15 +736,30 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function claim(address _receiver) public
     {
-        
+        require(purchases[_receiver].vesting_timestamp + vesting_period_duration < block.timestamp, "ICO: No vesting reward available for claiming.");
+        require(purchases[_receiver].claims_count < vesting_periods_total, "ICO: Total vesting reward is already claimed.");
+        uint256 _num_periods  = (block.timestamp - purchases[_receiver].vesting_timestamp) / vesting_period_duration;
+        purchases[_receiver].vesting_timestamp = end_timestamp + _num_periods * vesting_period_duration;
+
+        if(purchases[_receiver].claims_count + _num_periods > vesting_periods_total)
+        {
+            _num_periods = vesting_periods_total - purchases[_receiver].claims_count;
+            purchases[_receiver].claims_count = vesting_periods_total;
+        }
+        else
+        {
+            purchases[_receiver].claims_count += _num_periods;
+        }
+
+        IERC223(GnGToken_address).transfer(_receiver, purchases[_receiver].amount_per_period * _num_periods);
     }
 
     // This function accepts NATIVE CURRENCY (CLO on Callisto chain),
     // this function is used to purchase GNG tokens via CLO deposit.
     receive() external payable ICOstarted() nonReentrant()
     {
-        require(PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) != 0, "Price Feed error");
-            require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "There are less than 1 GNG token in the contract. ICO is ended.");
+        require(PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) != 0, "ICO: Price Feed error");
+        require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
         uint256 _refund_amount = 0;
         // User is buying GnG token and paying with a native currency.
             //uint256 _reward = assets[0].rate * msg.value / 1000; // Old calculation function for manual price update version.
@@ -772,7 +779,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) * 1e18;
         }
 
-        require(_reward >= min_purchase, "Minimum purchase criteria is not met");
+        require(_reward >= min_purchase, "ICO: Minimum purchase criteria is not met");
         //IERC223(GnGToken_address).transfer(msg.sender, _reward);
 
         _finalisePayment(_reward, msg.sender);
@@ -790,8 +797,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                                           //            The amount must be >= approved amount.
                  external ICOstarted() nonReentrant()
     {
-        require(PriceFeed(priceFeed).getPrice(_token_contract) != 0, "Price Feed does not contain info about this token.");
-        require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "There are less than 1 GNG token in the contract. ICO is ended.");
+        require(PriceFeed(priceFeed).getPrice(_token_contract) != 0, "ICO: Price Feed does not contain info about this token.");
+        require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
         uint256 _refund_amount = 0;
 
         // PriceFeedData * _value_to_deposit / decimals ==>> 
@@ -813,7 +820,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
         IERC223(_token_contract).transferFrom(msg.sender, address(this), (_value_to_deposit - _refund_amount) );
 
-        require(_reward >= min_purchase, "Minimum purchase criteria is not met");
+        require(_reward >= min_purchase, "ICO: Minimum purchase criteria is not met");
         //IERC223(GnGToken_address).transfer(msg.sender, _reward);
         
         _finalisePayment(_reward, msg.sender);
@@ -838,8 +845,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         }
         if(asset_index[msg.sender] != 0)
         {
-            require(PriceFeed(priceFeed).getPrice(msg.sender) != 0, "Price Feed does not contain info about this token.");
-            require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "There are less than 1 GNG token in the contract. ICO is ended.");
+            require(PriceFeed(priceFeed).getPrice(msg.sender) != 0, "ICO: Price Feed does not contain info about this token.");
+            require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
             // User is buying GnG token and paying with a token from "acceptable tokens list".
             //uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000; // Old calculation function.
             uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender) * _value / tokenPricePer10000 * 10000 /1e18;
@@ -854,7 +861,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                 _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(msg.sender) * 1e18;
             }
 
-            require(_reward >= min_purchase, "Minimum purchase criteria is not met");
+            require(_reward >= min_purchase, "ICO: Minimum purchase criteria is not met");
             //IERC223(GnGToken_address).transfer(_from, _reward);
 
             _finalisePayment(_reward, _from);
@@ -916,7 +923,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function modify_asset(uint256 _id, address _token_contract, string memory _name) external // onlyOwner
     {
-        require(msg.sender == owner() || msg.sender == admin, "Access restriction error");
+        require(msg.sender == owner() || msg.sender == admin, "ICO: asset access restriction error");
         // We are setting up the price for TOKEN that will be accepted as payment during ICO.
         require (_token_contract != address(0));
         assets[_id].contract_address = _token_contract;
@@ -953,7 +960,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX, address _priceFeed, uint256 _targetPrice, string calldata _name) public // onlyOwner
     {
-        require(msg.sender == owner() || msg.sender == admin, "Access restriction error");
+        require(msg.sender == owner() || msg.sender == admin, "ICO: ICO setup access restriction error");
         GnGToken_address   = _GNG;
         start_timestamp    = _start_UNIX;
         end_timestamp      = _end_UNIX;
@@ -963,13 +970,14 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         tokenPricePer10000 = _targetPrice;
     }
 
-    function setup_vesting(uint256 _vesting_period, uint256 _instant_delivery, uint256 _vesting_percentage) public // onlyOwner
+    function setup_vesting(uint256 _vesting_period, uint256 _instant_delivery, uint256 _vesting_percentage, uint256 _num_periods) public // onlyOwner
     {
-        require(msg.sender == owner() || msg.sender == admin, "Access restriction error");
+        require(msg.sender == owner() || msg.sender == admin, "ICO: Vesting setup access restriction error");
 
         vesting_period_duration   = _vesting_period;
         vesting_period_percentage = _vesting_percentage;
         instant_delivery          = _instant_delivery;
+        vesting_periods_total     = _num_periods;
     }
 
     // Emergency function that allows the owner of the contract to call any code
