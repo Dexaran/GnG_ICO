@@ -704,6 +704,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     receive() external payable ICOstarted() nonReentrant()
     {
         require(PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) != 0, "Price Feed error");
+            require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "There are less than 1 GNG token in the contract. ICO is ended.");
         uint256 _refund_amount = 0;
         // User is buying GnG token and paying with a native currency.
             //uint256 _reward = assets[0].rate * msg.value / 1000; // Old calculation function for manual price update version.
@@ -740,6 +741,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                  external ICOstarted() nonReentrant()
     {
         require(PriceFeed(priceFeed).getPrice(_token_contract) != 0, "Price Feed does not contain info about this token.");
+        require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "There are less than 1 GNG token in the contract. ICO is ended.");
         uint256 _refund_amount = 0;
 
         // PriceFeedData * _value_to_deposit / decimals ==>> 
@@ -811,6 +813,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         if(asset_index[msg.sender] != 0)
         {
             require(PriceFeed(priceFeed).getPrice(msg.sender) != 0, "Price Feed does not contain info about this token.");
+            require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "There are less than 1 GNG token in the contract. ICO is ended.");
             // User is buying GnG token and paying with a token from "acceptable tokens list".
             //uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000; // Old calculation function.
             uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender) * _value / tokenPricePer10000 * 10000 /1e18;
