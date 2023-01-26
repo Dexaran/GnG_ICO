@@ -2,7 +2,7 @@
 
 ### Deployment
 
-- Test ICO contract on mainnet: [0x88BeCe69838f78f71fc1aD7BC4c13565FD5188a6](https://explorer.callisto.network/address/0x88BeCe69838f78f71fc1aD7BC4c13565FD5188a6/transactions)
+- Test ICO contract on mainnet: [0x7A3Df1204CcCad1Eb5BD6e52A18f7F30556B8596](https://explorer.callisto.network/address/0x7A3Df1204CcCad1Eb5BD6e52A18f7F30556B8596/transactions)
 
 - Test GNG token contract on mainnet: [0xFd5493FC83CE4FE44c951AA244946Bd652AC0361](https://explorer.callisto.network/address/0xFd5493FC83CE4FE44c951AA244946Bd652AC0361/transactions)
 
