@@ -652,9 +652,10 @@ contract PriceFeed
         
         if(token==0xeb5B7d171d00e4Df2b3185e1e27f9f1A447200eF) return 9604863230000000; // SOY
         
-        if(token==0x84a8509CbAa982A35fFbc3cd7c1eBbe9534b6C60) return 4756345080000000; 
+        if(token==0x84a8509CbAa982A35fFbc3cd7c1eBbe9534b6C60) return 4756345080000000; // CLOE
     }
 }
+
 
 contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 {
@@ -717,9 +718,9 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         {
             uint256 _old_reward = _reward;
             _reward = IERC223(GnGToken_address).balanceOf(address(this));
-            uint256 _reward_overflow = _reward - _old_reward;
-
-            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) /1e18;
+            uint256 _reward_overflow = _old_reward - _reward;
+            
+            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) * 1e18;
         }
 
         require(_reward >= min_purchase, "Minimum purchase criteria is not met");
@@ -749,10 +750,12 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         {
             uint256 _old_reward = _reward;
             _reward = IERC223(GnGToken_address).balanceOf(address(this));
-            uint256 _reward_overflow = _reward - _old_reward;
+            uint256 _reward_overflow = _old_reward - _reward;
 
             //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
-            _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / PriceFeed(priceFeed).getPrice(_token_contract)/1e18;
+
+            ///                200 * 1e18      / 10000 * 250                 / PriceFeed * 1e18                               * 1e18
+            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(_token_contract) * 1e18;
         }
 
 
@@ -761,6 +764,32 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         require(_reward >= min_purchase, "Minimum purchase criteria is not met");
         IERC223(GnGToken_address).transfer(msg.sender, _reward);
     }
+
+
+/*
+    function viewRefund(uint256 _amountToDeposit) public view returns(uint256 _refund)
+    {
+        uint256 _reward =  3187227770000000 * _amountToDeposit / tokenPricePer10000 * 10000 /1e18;
+
+        if(_reward <= IERC223(GnGToken_address).balanceOf(address(this)))
+        {
+            return 0;
+        }
+        else
+        {
+            uint256 _old_reward = _reward;
+            _reward = IERC223(GnGToken_address).balanceOf(address(this));
+            uint256 _reward_overflow = _old_reward - _reward;
+
+            //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
+
+            /// CLO =   200 * 1e18      / 10000 * 250                 / (PriceFeed*1e18) * 1e18
+            _refund = (_reward_overflow / 10000 * tokenPricePer10000) / 3187227770000000 * 1e18;  // <<== Correct formula,
+                                                                                                  //      doesn't work with non-even units
+                                                                                                  //      a deposit must be greater than 1 full unit (1 CLO/ SOY/ CLOE).
+        }
+    }
+*/
 
     function tokenReceived(address _from, uint _value, bytes memory _data) external override ICOstarted() nonReentrant()
     {
@@ -791,10 +820,9 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                 {
                 uint256 _old_reward = _reward;
                 _reward = IERC223(GnGToken_address).balanceOf(address(this));
-                uint256 _reward_overflow = _reward - _old_reward;
+                uint256 _reward_overflow = _old_reward - _reward;
 
-                //_refund_amount = _reward_overflow * 1000 / assets[asset_index[msg.sender]].rate; // Old calculation funciton.
-                _refund_amount = (_reward_overflow * 10000 / tokenPricePer10000) / PriceFeed(priceFeed).getPrice(msg.sender) /1e18;
+                _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(msg.sender) * 1e18;
             }
 
             require(_reward >= min_purchase, "Minimum purchase criteria is not met");
