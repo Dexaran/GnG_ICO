@@ -643,10 +643,17 @@ contract GnGToken is ERC223("Games and Goblins token", "GnG"), Ownable {
     }
 }
 
-abstract contract PriceFeed
+contract PriceFeed
 {
     // returns token price in USD with 18 decimals
-    function getPrice(address token) external view virtual returns(uint256 price);
+    function getPrice(address token) external view returns(uint256 price)
+    {
+        if(token==0x0000000000000000000000000000000000000001) return 3187227770000000; // CLO
+        
+        if(token==0xeb5B7d171d00e4Df2b3185e1e27f9f1A447200eF) return 9604863230000000; // SOY
+        
+        if(token==0x84a8509CbAa982A35fFbc3cd7c1eBbe9534b6C60) return 4756345080000000; 
+    }
 }
 
 contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
@@ -765,6 +772,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
         // Owner can deposit GNG token to the ICO contract and this function will be invoked.
 
+        require(PriceFeed(priceFeed).getPrice(msg.sender) != 0, "Price Feed does not contain info about this token.");
         uint256 _refund_amount = 0;
         if(msg.sender == GnGToken_address && _from == owner())
         {
@@ -816,8 +824,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     // `_amount_of_payment` quantity of tokens `_token_address` to the contract
     function get_reward(uint256 _amount_of_payment, address _token_address) external view returns (uint256 reward, string memory name)
     {
-        ///               3176591470000000                              * 200 * 1e18         /  200 * 10000    
-        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address) * _amount_of_payment / tokenPricePer10000 * 10000;
+        ///               3176591470000000   /1e18                           * 200 * 1e18         /  200 * 10000    
+        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address)/1e18 * _amount_of_payment / tokenPricePer10000 * 10000;
         return (_reward, assets[asset_index[_token_address]].name);
     }
 
