@@ -680,7 +680,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                                                         // to ICO contract. The value will be divided by 1000
                                                         // 200 is 20%. (200/1000 = 0.2);
 
-    uint256 public vesting_period_percentage = 200;     // % that will become available for claiming at each Vesting Period. Will be divided by 1000.
+    //uint256 public vesting_period_percentage = 200;     // % that will become available for claiming at each Vesting Period. Will be divided by 1000.
     uint256 public vesting_periods_total     = 6;       // A total number of vesting periods. After that much rewards were claimed no vesting will be paid.
 
     struct Purchase
@@ -972,14 +972,16 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         tokenPricePer10000 = _targetPrice;
     }
 
-    function setup_vesting(uint256 _vesting_period, uint256 _instant_delivery, uint256 _vesting_percentage, uint256 _num_periods) public // onlyOwner
+    function setup_vesting(uint256 _vesting_period, uint256 _instant_delivery, uint256 _num_periods) public // onlyOwner
     {
         require(msg.sender == owner() || msg.sender == admin, "ICO: Vesting setup access restriction error");
 
         vesting_period_duration   = _vesting_period;
-        vesting_period_percentage = _vesting_percentage;
         instant_delivery          = _instant_delivery;
         vesting_periods_total     = _num_periods;
+
+        
+        //vesting_period_percentage = _vesting_percentage;
     }
 
     // Emergency function that allows the owner of the contract to call any code
