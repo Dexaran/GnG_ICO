@@ -762,6 +762,9 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     {
         require(PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) != 0, "ICO: Price Feed error");
         require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
+
+        require(msg.value >= 1e18, "ICO: Min CLO deposit criteria is not met");
+
         uint256 _refund_amount = 0;
         // User is buying GnG token and paying with a native currency.
             //uint256 _reward = assets[0].rate * msg.value / 1000; // Old calculation function for manual price update version.
@@ -803,6 +806,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
         require(asset_index[_token_contract] != 0, "ICO: Invalid asset deposit.");
 
+        require(_value_to_deposit >= 1e18, "ICO: Min ERC20 deposit criteria is not met");
+
         uint256 _refund_amount = 0;
 
         // PriceFeedData * _value_to_deposit / decimals ==>> 
@@ -839,6 +844,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         //      `_value` is the amount of ERC223 tokens being deposited.
 
         // Owner can deposit GNG token to the ICO contract and this function will be invoked.
+
+        require(_value >= 1e18, "ICO: Min ERC223 deposit criteria is not met");
 
         uint256 _refund_amount = 0;
         if(msg.sender == GnGToken_address && _from == owner())
