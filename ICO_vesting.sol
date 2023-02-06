@@ -801,6 +801,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     {
         require(PriceFeed(priceFeed).getPrice(_token_contract) != 0, "ICO: Price Feed does not contain info about this token.");
         require(IERC223(GnGToken_address).balanceOf(address(this)) > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
+        require(asset_index[_token_contract] != 0, "ICO: Invalid asset deposit.");
+
         uint256 _refund_amount = 0;
 
         // PriceFeedData * _value_to_deposit / decimals ==>> 
