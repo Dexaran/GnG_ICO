@@ -729,9 +729,11 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     {
         purchases[_buyer].amountGNG         += _reward_amount; // Increment by _reward_amount because it can be not the first purchase from this address.
         purchases[_buyer].vesting_timestamp = end_timestamp;
-        purchases[_buyer].amount_per_period += _reward_amount * vesting_period_percentage / 1000;
 
-        IERC223(GnGToken_address).transfer(_buyer, _reward_amount * instant_delivery / 1000);
+        uint256 _instant_delivery           = _reward_amount * instant_delivery / 1000;
+        purchases[_buyer].amount_per_period += (_reward_amount - _instant_delivery) / vesting_periods_total;
+
+        IERC223(GnGToken_address).transfer(_buyer, _instant_delivery);
     }
 
     function claim(address _receiver) public
