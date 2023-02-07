@@ -971,9 +971,10 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         IERC223(GnGToken_address).transfer(owner(), _amount );
     }
 
-    function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX, address _priceFeed, uint256 _targetPrice, string calldata _name) public // onlyOwner
+    function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX, address _priceFeed, uint256 _targetPrice, string calldata _name) public onlyOwner
     {
-        require(msg.sender == owner() || msg.sender == admin, "ICO: ICO setup access restriction error");
+        //require(msg.sender == owner() || msg.sender == admin, "ICO: ICO setup access restriction error");
+
         GnGToken_address   = _GNG;
         start_timestamp    = _start_UNIX;
         end_timestamp      = _end_UNIX;
@@ -983,16 +984,21 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         tokenPricePer10000 = _targetPrice;
     }
 
-    function setup_vesting(uint256 _vesting_period, uint256 _instant_delivery, uint256 _num_periods) public // onlyOwner
+    function setup_vesting(uint256 _vesting_period, uint256 _instant_delivery, uint256 _num_periods) public onlyOwner
     {
-        require(msg.sender == owner() || msg.sender == admin, "ICO: Vesting setup access restriction error");
+        //require(msg.sender == owner() || msg.sender == admin, "ICO: Vesting setup access restriction error");
 
         vesting_period_duration   = _vesting_period;
         instant_delivery          = _instant_delivery;
         vesting_periods_total     = _num_periods;
+    }
 
-        
-        //vesting_period_percentage = _vesting_percentage;
+    function setup_contract_admin(uint256 _min_purchase, string calldata _name) public
+    {
+        require(msg.sender == owner() || msg.sender == admin, "ICO: Vesting setup access restriction error");
+
+        min_purchase = _min_purchase;
+        contractName = _name;
     }
 
     // Emergency function that allows the owner of the contract to call any code
