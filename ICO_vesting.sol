@@ -672,7 +672,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     uint256 public tokenPricePer10000; // Price of 10000 GNG tokens in USD
                                        // value 300 would mean that 1 GNG = 0.03 USD.
 
-    address public admin = msg.sender; // This address can execute SETUP function of the contract and modify acceptable pairs
+    //address public admin = msg.sender; // This address can execute SETUP function of the contract and modify acceptable pairs
                                        // it cannot access funds however.
 
     uint256 public vesting_period_duration   = 2592000; // 30 days in seconds.
@@ -934,10 +934,8 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         return (_reward, assets[asset_index[_token_address]].name);
     }
 
-    function modify_asset(uint256 _id, address _token_contract, string memory _name) external // onlyOwner
+    function modify_asset(uint256 _id, address _token_contract, string memory _name) external onlyOwner
     {
-        require(msg.sender == owner() || msg.sender == admin, "ICO: asset access restriction error");
-        // We are setting up the price for TOKEN that will be accepted as payment during ICO.
         require (_token_contract != address(0));
         assets[_id].contract_address = _token_contract;
         assets[_id].name = _name;
@@ -973,8 +971,6 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX, address _priceFeed, uint256 _targetPrice, string calldata _name) public onlyOwner
     {
-        //require(msg.sender == owner() || msg.sender == admin, "ICO: ICO setup access restriction error");
-
         GnGToken_address   = _GNG;
         start_timestamp    = _start_UNIX;
         end_timestamp      = _end_UNIX;
@@ -986,19 +982,9 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function setup_vesting(uint256 _vesting_period, uint256 _instant_delivery, uint256 _num_periods) public onlyOwner
     {
-        //require(msg.sender == owner() || msg.sender == admin, "ICO: Vesting setup access restriction error");
-
         vesting_period_duration   = _vesting_period;
         instant_delivery          = _instant_delivery;
         vesting_periods_total     = _num_periods;
-    }
-
-    function setup_contract_admin(uint256 _min_purchase, string calldata _name) public
-    {
-        require(msg.sender == owner() || msg.sender == admin, "ICO: Vesting setup access restriction error");
-
-        min_purchase = _min_purchase;
-        contractName = _name;
     }
 
     // Emergency function that allows the owner of the contract to call any code
@@ -1006,10 +992,5 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     function delegateCall(address _to, bytes calldata _data) external onlyOwner
     {
         (bool success, bytes memory data) = _to.delegatecall(_data);
-    }
-
-    function change_admin(address _new_admin) public onlyOwner
-    {
-        admin = _new_admin;
     }
 }
