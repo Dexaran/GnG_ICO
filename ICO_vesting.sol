@@ -900,7 +900,6 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     function viewRefund(uint256 _amountToDeposit) public view returns(uint256 _refund)
     {
         uint256 _reward =  3187227770000000 * _amountToDeposit / tokenPricePer10000 * 10000 /1e18;
-
         if(_reward <= IERC223(GnGToken_address).balanceOf(address(this)))
         {
             return 0;
@@ -910,9 +909,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             uint256 _old_reward = _reward;
             _reward = IERC223(GnGToken_address).balanceOf(address(this));
             uint256 _reward_overflow = _old_reward - _reward;
-
             //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
-
             /// CLO =   200 * 1e18      / 10000 * 250                 / (PriceFeed*1e18) * 1e18
             _refund = (_reward_overflow / 10000 * tokenPricePer10000) / 3187227770000000 * 1e18;  // <<== Correct formula,
                                                                                                   //      doesn't work with non-even units
@@ -1003,5 +1000,10 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     function delegateCall(address _to, bytes calldata _data) external onlyOwner
     {
         (bool success, bytes memory data) = _to.delegatecall(_data);
+    }
+
+    function change_admin(address _new_admin) public onlyOwner
+    {
+        admin = _new_admin;
     }
 }
