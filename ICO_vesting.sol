@@ -961,6 +961,9 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function setup_contract(address _GNG, uint256 _min_purchase, uint256 _start_UNIX, uint256 _end_UNIX, address _priceFeed, uint256 _targetPrice, string calldata _name) public onlyOwner
     {
+        require(_GNG       != address(0), "Invalid GNG address");
+        require(_priceFeed != address(0), "Invalid PriceFeed address");
+
         GnGToken_address   = _GNG;
         start_timestamp    = _start_UNIX;
         end_timestamp      = _end_UNIX;
