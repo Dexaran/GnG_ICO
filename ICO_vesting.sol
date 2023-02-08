@@ -791,7 +791,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             _reward = _GNG_balance - vesting_allocation;
             uint256 _reward_overflow = _old_reward - _reward;
             
-            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / _price * 1e18;
+            _refund_amount = (_reward_overflow * tokenPricePer10000 / 10000 ) * 1e18 / _price ;
         }
 
         require(_reward >= min_purchase, "ICO: Minimum purchase criteria is not met");
@@ -836,7 +836,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
 
             ///                200 * 1e18      / 10000 * 250                 / PriceFeed * 1e18                               * 1e18
-            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / _price * 1e18;
+            _refund_amount = (_reward_overflow * tokenPricePer10000 / 10000 ) * 1e18 / _price;
         }
 
 
@@ -920,7 +920,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     function get_reward(uint256 _amount_of_payment, address _token_address) external view returns (uint256 reward, string memory name)
     {
         ///               3176591470000000   /1e18                           * 200 * 1e18         /  200 * 10000    
-        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address) * _amount_of_payment / tokenPricePer10000 * 10000 / 1e18;
+        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_address) * _amount_of_payment * 10000 / tokenPricePer10000/ 1e18;
         return (_reward, assets[asset_index[_token_address]].name);
     }
 
