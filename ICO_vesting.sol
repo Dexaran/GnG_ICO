@@ -746,7 +746,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         require(purchases[_receiver].vesting_timestamp + vesting_period_duration < block.timestamp, "ICO: No vesting reward available for claiming.");
         require(purchases[_receiver].claims_count < vesting_periods_total, "ICO: Total vesting reward is already claimed.");
         uint256 _num_periods  = (block.timestamp - purchases[_receiver].vesting_timestamp) / vesting_period_duration;
-        purchases[_receiver].vesting_timestamp = end_timestamp + _num_periods * vesting_period_duration;
+        purchases[_receiver].vesting_timestamp += (_num_periods * vesting_period_duration);
 
         if(purchases[_receiver].claims_count + _num_periods > vesting_periods_total)
         {
