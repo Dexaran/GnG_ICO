@@ -767,8 +767,11 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     // this function is used to purchase GNG tokens via CLO deposit.
     receive() external payable ICOstarted() nonReentrant()
     {
-        require(PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) != 0, "ICO: Price Feed error");
-        require(IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
+        uint256 _GNG_balance = IERC223(GnGToken_address).balanceOf(address(this));
+        uint256 _price       = PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001);
+
+        require(_price != 0, "ICO: Price Feed error");
+        require(_GNG_balance - vesting_allocation > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
 
         require(msg.value >= 1e18, "ICO: Min CLO deposit criteria is not met");
 
@@ -779,16 +782,16 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         // `PriceFeedData/1e18 * msg.value / 1e18` ==>> This is value that was paid in USD
         // `USD value / tokenPricePer10000 * 10000 * 1e18` ==>> this is final value of the tokens that will be paid respecting decimals
         // since both PriceFeedData and GNG token have 18 decimals we will simply remove `/1e18` and `*1e18` from the equation.
-        uint256 _reward = PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) * msg.value / tokenPricePer10000 * 10000 /1e18;
+        uint256 _reward = _price * msg.value / tokenPricePer10000 * 10000 /1e18;
 
         // Check edge cases
-        if(_reward > IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation)
+        if(_reward > _GNG_balance - vesting_allocation)
         {
             uint256 _old_reward = _reward;
-            _reward = IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation;
+            _reward = _GNG_balance - vesting_allocation;
             uint256 _reward_overflow = _old_reward - _reward;
             
-            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(0x0000000000000000000000000000000000000001) * 1e18;
+            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / _price * 1e18;
         }
 
         require(_reward >= min_purchase, "ICO: Minimum purchase criteria is not met");
@@ -809,8 +812,11 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
                                           //            The amount must be >= approved amount.
                  external ICOstarted() nonReentrant()
     {
-        require(PriceFeed(priceFeed).getPrice(_token_contract) != 0, "ICO: Price Feed does not contain info about this token.");
-        require(IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
+        uint256 _GNG_balance = IERC223(GnGToken_address).balanceOf(address(this));
+        uint256 _price        = PriceFeed(priceFeed).getPrice(_token_contract);
+
+        require(_price != 0, "ICO: Price Feed does not contain info about this token.");
+        require(_GNG_balance - vesting_allocation > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
         require(asset_index[_token_contract] != 0, "ICO: Invalid asset deposit.");
 
         require(_value_to_deposit >= 1e18, "ICO: Min ERC20 deposit criteria is not met");
@@ -818,19 +824,19 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         uint256 _refund_amount = 0;
 
         // PriceFeedData * _value_to_deposit / decimals ==>> 
-        uint256 _reward = PriceFeed(priceFeed).getPrice(_token_contract) * _value_to_deposit / tokenPricePer10000 * 10000 /1e18;
+        uint256 _reward = _price * _value_to_deposit / tokenPricePer10000 * 10000 /1e18;
 
         // Check edge cases
-        if(_reward > IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation)
+        if(_reward > _GNG_balance - vesting_allocation)
         {
             uint256 _old_reward = _reward;
-            _reward = IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation;
+            _reward = _GNG_balance - vesting_allocation;
             uint256 _reward_overflow = _old_reward - _reward;
 
             //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
 
             ///                200 * 1e18      / 10000 * 250                 / PriceFeed * 1e18                               * 1e18
-            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(_token_contract) * 1e18;
+            _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / _price * 1e18;
         }
 
 
@@ -863,20 +869,25 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         }
         if(asset_index[msg.sender] != 0)
         {
-            require(PriceFeed(priceFeed).getPrice(msg.sender) != 0, "ICO: Price Feed does not contain info about this token.");
-            require(IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
+            uint256 _GNG_balance = IERC223(GnGToken_address).balanceOf(address(this));
+            uint256 _price         = PriceFeed(priceFeed).getPrice(msg.sender);
+
+            require(_price != 0, "ICO: Price Feed does not contain info about this token.");
+            require(_GNG_balance - vesting_allocation > 1e18, "ICO: There are less than 1 GNG token in the contract. ICO is ended.");
             // User is buying GnG token and paying with a token from "acceptable tokens list".
             //uint256 _reward = assets[asset_index[msg.sender]].rate * _value / 1000; // Old calculation function.
-            uint256 _reward = PriceFeed(priceFeed).getPrice(msg.sender) * _value / tokenPricePer10000 * 10000 /1e18;
+            uint256 _reward = _price * _value / tokenPricePer10000 * 10000 /1e18;
 
             // Check edge cases
-            if(_reward > IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation)
+            if(_reward > _GNG_balance - vesting_allocation)
                 {
                 uint256 _old_reward = _reward;
-                _reward = IERC223(GnGToken_address).balanceOf(address(this)) - vesting_allocation;
+                _reward = _GNG_balance - vesting_allocation;
                 uint256 _reward_overflow = _old_reward - _reward;
 
-                _refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(msg.sender) * 1e18;
+                //_refund_amount = (_reward_overflow / 10000 * tokenPricePer10000) / PriceFeed(priceFeed).getPrice(msg.sender) * 1e18;
+
+                _refund_amount = (_reward_overflow * tokenPricePer10000 / 10000 ) * 1e18 / _price ;
             }
 
             require(_reward >= min_purchase, "ICO: Minimum purchase criteria is not met");
@@ -896,29 +907,6 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
             revert();
         }
     }
-
-
-/*
-    function viewRefund(uint256 _amountToDeposit) public view returns(uint256 _refund)
-    {
-        uint256 _reward =  3187227770000000 * _amountToDeposit / tokenPricePer10000 * 10000 /1e18;
-        if(_reward <= IERC223(GnGToken_address).balanceOf(address(this)))
-        {
-            return 0;
-        }
-        else
-        {
-            uint256 _old_reward = _reward;
-            _reward = IERC223(GnGToken_address).balanceOf(address(this));
-            uint256 _reward_overflow = _old_reward - _reward;
-            //_refund_amount = _reward_overflow * 1000 / assets[asset_index[_token_contract]].rate; // Old calculation function
-            /// CLO =   200 * 1e18      / 10000 * 250                 / (PriceFeed*1e18) * 1e18
-            _refund = (_reward_overflow / 10000 * tokenPricePer10000) / 3187227770000000 * 1e18;  // <<== Correct formula,
-                                                                                                  //      doesn't work with non-even units
-                                                                                                  //      a deposit must be greater than 1 full unit (1 CLO/ SOY/ CLOE).
-        }
-    }
-*/
 
     // Function that returns info about acceptable payment options
     // _id = 0 is for native currency (CLO).
