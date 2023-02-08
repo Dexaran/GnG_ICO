@@ -662,6 +662,7 @@ contract PriceFeed
 
 contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 {
+    bool    public claiming_enabled = true;
     uint256 public vesting_allocation;
     string  public contractName = "NOT INITIALIZED";
     uint256 public min_purchase;  // Minimum amount of GNG tokens that a user must purchase.
@@ -743,6 +744,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
 
     function claim(address _receiver) public
     {
+        require(claiming_enabled, "ICO: Claiming is disabled by the owner.");
         require(purchases[_receiver].vesting_timestamp + vesting_period_duration < block.timestamp, "ICO: No vesting reward available for claiming.");
         require(purchases[_receiver].claims_count < vesting_periods_total, "ICO: Total vesting reward is already claimed.");
         uint256 _num_periods  = (block.timestamp - purchases[_receiver].vesting_timestamp) / vesting_period_duration;
@@ -992,5 +994,10 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
     function delegateCall(address _to, bytes calldata _data) external onlyOwner
     {
         (bool success, bytes memory data) = _to.delegatecall(_data);
+    }
+
+    function set_claiming(bool _claiming_enabled) public onlyOwner
+    {
+        claiming_enabled = _claiming_enabled;
     }
 }
