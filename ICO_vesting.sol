@@ -734,7 +734,7 @@ contract ICO is IERC223Recipient, Ownable, ReentrancyGuard
         purchases[_buyer].amountGNG         += (_reward_amount - _instant_delivery); // Increment by _reward_amount because it can be not the first purchase
                                                                                      // from this address.
                                                                                      // Save this values for recognition reasons only
-                                                                                     // to record "vesting" amount of each user.
+                                                                                     // to record "initial vesting" amount of each user.
         purchases[_buyer].vesting_timestamp = end_timestamp;
         purchases[_buyer].amount_per_period += (_reward_amount - _instant_delivery) / vesting_periods_total;
         vesting_allocation += (_reward_amount - _instant_delivery);
