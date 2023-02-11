@@ -4,6 +4,7 @@
 ### Callisto Mainnet Deployment
 
 - GNG token: https://explorer.callisto.network/address/0xB9dC1B31b4966303B4e2c3AEA5Fd42731e959670/transactions
+- GNG ICO round 1 contract: https://explorer.callisto.network/address/0x9c16739A99E3E48FaDB4F8224a1BbaE62b326D1C/transactions
 
 
 ### Test Deployment
