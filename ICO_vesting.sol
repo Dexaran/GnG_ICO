@@ -77,17 +77,6 @@ abstract contract ReentrancyGuard {
     }
 }
 
-abstract contract IERC223Recipient { 
-/**
- * @dev Standard ERC223 function that will handle incoming token transfers.
- *
- * @param _from  Token sender address.
- * @param _value Amount of tokens.
- * @param _data  Transaction metadata.
- */
-    function tokenReceived(address _from, uint _value, bytes memory _data) external virtual;
-}
-
 abstract contract MinterSetup {
     bool public setup_mode = true;
     mapping (address => bool) public minters;
@@ -103,6 +92,17 @@ abstract contract MinterSetup {
         require(setup_mode, "This is only allowed in setup mode");
         _;
     }
+}
+
+abstract contract IERC223Recipient { 
+/**
+ * @dev Standard ERC223 function that will handle incoming token transfers.
+ *
+ * @param _from  Token sender address.
+ * @param _value Amount of tokens.
+ * @param _data  Transaction metadata.
+ */
+    function tokenReceived(address _from, uint _value, bytes memory _data) external virtual;
 }
 
 
@@ -609,26 +609,12 @@ contract GnGToken is ERC223("Games and Goblins token", "GnG"), Ownable {
         uint256 value = IERC223(token).balanceOf(address(this));
         IERC223(token).transfer(to, value);
     }
-    
-    // @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
-    function mint(address _to, uint256 _amount) public onlyMinter {
-        _mint(_to, _amount);
-    }
-    
-    // An event thats emitted when assign a minter
-    event AssignMinter(address minter, bool status);
 
     constructor() {
         address msgSender = msg.sender;
         _owner = msg.sender;
-        _mint(msg.sender, 120000000 * 10 ** 18);
+        _mint(msg.sender, 500000000 * 10 ** 18);
         emit OwnershipTransferred(address(0), msgSender);
-    }
-    
-    function assignMinter(address _minter, bool _status) public onlyOwner onlySetupMode
-    {
-        minters[_minter] = _status;
-        emit AssignMinter(_minter, _status);
     }
     
     function disableSetup() public onlyOwner onlySetupMode
